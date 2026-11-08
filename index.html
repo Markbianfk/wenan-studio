@@ -109,6 +109,10 @@ textarea{resize:vertical;line-height:1.9}
 .note b{color:var(--ink-2);font-weight:500}
 .note ol{margin:6px 0 0;padding-left:18px}
 
+
+.script-full{border:1px solid var(--line);background:#fff;padding:20px 22px;margin-bottom:8px}
+.script-full .para{font-size:15.5px;line-height:1.95;margin:0 0 12px;color:var(--ink)}
+.script-full .para:last-child{margin-bottom:0}
 @media (max-width:920px){
   .topbar{height:auto;padding:14px 16px;gap:10px}
   .brand p{display:none}
@@ -272,22 +276,31 @@ textarea{resize:vertical;line-height:1.9}
     joke:    {label:"梗",     tag:"抛梗",     color:"var(--c-joke)"},
     empathy: {label:"共情",   tag:"给共情",   color:"var(--c-empathy)"},
     info:    {label:"新信息", tag:"补信息",   color:"var(--c-info)"},
-    after:   {label:"余味",   tag:"留缺口",   color:"var(--c-after)"}
+    after:   {label:"收尾",   tag:"留缺口",   color:"var(--c-after)"}
   };
 
-  var TRANS = {
-    hook:    ["先别急着划走。", "这条我说到根上。"],
-    pain:    ["但这个坑，比你想的深。", "后面还有一层。", "先记住这个数。"],
-    amplify: ["这还不是最多的。", "更麻烦的在后头。"],
-    turn:    ["真正的原因，说出来你别急。", "接下来这句，很多人不爱听。"],
-    solve:   ["具体怎么做，我拆成三步。", "第一步就得改。"],
-    joke:    ["不过话说回来。", "笑完说正事。"],
-    empathy: ["这一年他过得不容易。", "话到这儿，喘口气。"],
-    info:    ["这条信息，能省你不少钱。", "还有一个细节。"],
-    after:   ["下条讲得更狠。", "评论区留小区名。"]
+  /* 连接词：每个单元的开口句，负责把上一句接住（口播不能回看，逻辑必须显性） */
+  var LEADS = {
+    pain:    ["先说个真事。", "这事我上周刚碰上。", "你注意过没有？", "带看的时候最常见。"],
+    amplify: ["更麻烦的在后头。", "这笔账算下来，", "代价不止这些。", "真正掏钱的是这里。"],
+    turn:    ["但问题不在表面。", "往深一层看，", "反过来才看得清。", "关键不在这。"],
+    solve:   ["怎么避？", "做法其实很简单。", "记住一个动作。", "我一般这么干。"],
+    info:    ["还有一条，", "补个信息，", "这里有个细节。", "顺便说一句，"],
+    joke:    ["说起来有点好笑。", "听着像段子。", "行吧。", "这话不好听。"],
+    empathy: ["换谁都不好受。", "这滋味我懂。", "站他的位置上，", "这种事最磨人。"],
+    hook:    [""],
+    after:   [""]
   };
 
-  /* 按栏目分的镜头库 */
+  /* 三句里的第三句：按这句话的内容类型选，不是随机 */
+  var FUN = {
+    num:    ["这数听着不大，落在你身上就是钱。", "数字不会骗人，话会。", "一算就知道疼在哪。"],
+    rule:   ["规矩都写着呢，就是没人念给你听。", "条文不骗人，卖房的话会。", "白纸黑字，最好使。"],
+    method: ["不难，就是没人愿意多走这一趟。", "多问一句的事，没人问。", "这招不高级，但管用。"],
+    exp:    ["这场面我见得太多了。", "每次说到这，客户都不吭声。", "我不是吓唬你，是真事。"],
+    plain:  ["听着像段子，事是真的。", "这话我说了不下一百遍。", "不夸张，就这样。"]
+  };
+
   var SHOTS = {
     talk: {
       a:[{shot:"近景·正面半身，竖拍，镜头与眼平齐", exp:"直视镜头，眉心微收，不笑", act:"右手食指在胸前点两下，说完停住", emo:"让人想再听一句"},
@@ -301,211 +314,166 @@ textarea{resize:vertical;line-height:1.9}
       e:[{shot:"中景·正面，退半步，画面留白", exp:"微笑但不热络", act:"抬一下手示意下条见", emo:"留个未闭合的口"}]
     },
     tour: {
-      a:[{shot:"中景·门口落地，身后是小区大门，边走边说", exp:"看镜头，抬手往身后一指", act:"走路起步，脚步带节奏", emo:"带人进场的开场感"},
-         {shot:"广角·小区全景空镜 2 秒，再接人入画", exp:"入画时抬头看楼", act:"手插兜走近镜头", emo:"先把场面交代清楚"}],
-      b:[{shot:"手持跟拍·侧后方，边走边拍园路", exp:"侧脸，偶尔转头看镜头", act:"手掌摊向绿化带，划一下", emo:"边走边挑毛病的挑剔"},
+      a:[{shot:"中景·门口落地，身后是小区大门，边走边说", exp:"看镜头，抬手往身后一指", act:"走路起步，脚步带节奏", emo:"带人进场"},
+         {shot:"广角·小区全景空镜 2 秒，再接人入画", exp:"入画时抬头看楼", act:"手插兜走近镜头", emo:"先交代场面"}],
+      b:[{shot:"手持跟拍·侧后方，边走边拍园路", exp:"侧脸，偶尔转头看镜头", act:"手掌摊向绿化带划一下", emo:"边走边挑毛病"},
          {shot:"中景·停步，正对镜头，背后是楼栋", exp:"皱眉，嘴角下压", act:"蹲下摸一下地砖缝", emo:"细节处的怀疑"}],
-      c:[{shot:"特写·手部与材质，如地砖缝、门锁、台面", exp:"不露脸", act:"指甲抠一下接缝，再抬头", emo:"验证，不是听介绍"},
+      c:[{shot:"特写·手部与材质，地砖缝、门锁、台面", exp:"不露脸", act:"指甲抠一下接缝，再抬头", emo:"验证，不是听介绍"},
          {shot:"中景·俯拍台账或图纸，手指点住一处", exp:"低头看资料", act:"手指点住一行，停两秒", emo:"拿证据说话"}],
-      d:[{shot:"过肩镜头·销售在画面左侧，我在右侧背身", exp:"销售微笑，我不笑", act:"我轻微点头，不接话", emo:"听出对方在绕"}],
-      e:[{shot:"中景·走出画面，回头说最后一句", exp:"回头，表情放松", act:"抬手示意下一站", emo:"留个未闭合的口"}]
+      d:[{shot:"过肩镜头·销售在左，我在右背身", exp:"销售微笑，我不笑", act:"轻微点头，不接话", emo:"听出对方在绕"},
+         {shot:"近景·对方说话时的第一秒", exp:"捕捉那一下迟疑", act:"我把手机往下压一点", emo:"不点破，但记着"}],
+      e:[{shot:"中景·走出画面，回头说最后一句", exp:"回头，表情放松", act:"抬手示意下一站", emo:"留扣子"}]
     },
     interview: {
-      a:[{shot:"中景·双人对坐，我在画面左侧，营销总右侧", exp:"我点头，对方正襟", act:"我把问题单放在桌上", emo:"正式开场"},
-         {shot:"近景·过肩，从我肩后拍对方", exp:"对方直视我", act:"对方双手交叠搁在桌上", emo:"把话语权交给对方"}],
-      b:[{shot:"近景·正面，我说的这句切我的单人中景", exp:"我语气平，看着对方", act:"我把问题单往前推一点", emo:"问到点上，不客套"},
-         {shot:"特写·对方的脸，回答时的第一秒", exp:"对方短暂停顿，眼神偏一下", act:"对方手指敲桌面", emo:"捕捉那一下迟疑"}],
-      c:[{shot:"正反打·对方回答中景，我在前景虚化点头", exp:"对方边说边看我", act:"对方抬手比划楼栋朝向", emo:"专业解释的确定感"},
-         {shot:"中景·对方和我同框，侧坐", exp:"我低头记一笔", act:"我在本子上写一行", emo:"认真在核"}],
-      d:[{shot:"近景·我的反应镜头，不说话", exp:"我抿嘴，抬一下眉", act:"我停两秒再开口", emo:"不接茬的追问感"}],
-      e:[{shot:"中景·双人起身握手，或我看向镜头", exp:"我笑一下，收住", act:"我合上本子", emo:"留个未闭合的口"}]
+      a:[{shot:"中景·双人对坐，我在左，营销总在右", exp:"我点头，对方正襟", act:"我把问题单放在桌上", emo:"正式开场"},
+         {shot:"近景·过肩，从我肩后拍对方", exp:"对方直视我", act:"对方双手交叠搁在桌上", emo:"把话语权交出去"}],
+      b:[{shot:"近景·我说的这句切我的单人中景", exp:"语气平，看着对方", act:"把问题单往前推一点", emo:"问到点上"},
+         {shot:"特写·对方面部，回答第一秒", exp:"短暂停顿，眼神偏一下", act:"手指敲桌面", emo:"捕捉迟疑"}],
+      c:[{shot:"正反打·对方中景，我前景虚化点头", exp:"边说边看我", act:"抬手比划朝向", emo:"专业解释的确定感"},
+         {shot:"中景·两人同框侧坐", exp:"我低头记一笔", act:"我在本子上写一行", emo:"认真在核"}],
+      d:[{shot:"近景·我的反应镜头，不说话", exp:"抿嘴，抬一下眉", act:"停两秒再开口", emo:"不接茬的追问感"},
+         {shot:"近景·对方停顿后继续", exp:"对方换了个坐姿", act:"对方喝了口水", emo:"那一秒的犹豫"}],
+      e:[{shot:"中景·双人起身握手，或我看向镜头", exp:"笑一下，收住", act:"合上本子", emo:"留扣子"}]
     }
   };
 
-  /* 术语 → 大白话 */
   var PLAIN = {
-    "网签":"签合同备案",
-    "备案价":"官方限价",
-    "得房率":"能用上的面积",
-    "公摊":"共用的面积",
-    "容积率":"盖得有多密",
-    "去化率":"开盘卖掉了多少",
-    "五证":"能合法卖的五个证",
-    "滞纳金":"晚交的罚款",
-    "梯户比":"几户共用电梯",
-    "楼距":"隔多远",
-    "精装":"带装修交房",
-    "动线":"从进门到睡觉要走的路线",
-    "产权年限":"能用多少年",
-    "物业费":"物业的钱",
-    "首付":"买房先掏的这块钱",
-    "交付标准":"交房时到底给你什么"
+    "网签":"签合同备案", "备案价":"官方限价", "得房率":"能用上的面积", "公摊":"共用的面积",
+    "容积率":"盖得有多密", "去化率":"卖掉了多少", "五证":"能卖的五个证", "滞纳金":"晚交的罚款",
+    "梯户比":"几户共用电梯", "楼间距":"楼与楼隔多远", "精装":"带装修交房", "动线":"进门到睡觉的路线",
+    "产权年限":"能用多少年", "物业费":"物业的钱", "首付":"先掏的这块钱", "交付标准":"交房给你什么"
   };
 
-  var FUN = [
-    "这话不好听，真的。",
-    "销售想打我。",
-    "不是来砸盘的。",
-    "听着像段子。",
-    "我妈都听懂了。",
-    "只多两页纸的事。",
-    "说多了得罪人。",
-    "这钱省得荒诞。"
-  ];
+  function strip(s){ return String(s || "").trim().replace(/[。！？，、；：\s]+$/g, ""); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function pick(a, seed, salt){ return a[Math.abs(seed + salt * 7) % a.length]; }
+  function fmtTime(sec){ var m = Math.floor(sec/60), s = sec%60; return m + ":" + (s<10?"0"+s:s); }
+  function cc(s){ return String(s).replace(/\s/g, "").length; }
+  function clip(s, n){
+    s = String(s).replace(/[。！？]+$/g,"").trim();
+    if (s.length <= n + 6) return s;
+    var cut = s.slice(0, n + 6);
+    var p = Math.max(cut.lastIndexOf("，"), cut.lastIndexOf("："), cut.lastIndexOf("、"));
+    return p >= 8 ? cut.slice(0, p) : cut;
+  }
 
-  function strip(s){
-    return String(s || "").trim().replace(/[。！？，、；：\s]+$/g, "");
-  }
-  function esc(s){
-    return String(s).replace(/[&<>"]/g, function(c){
-      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
-    });
-  }
-  function pick(arr, seed, salt){
-    return arr[Math.abs(seed + salt * 7) % arr.length];
-  }
-  function fmtTime(sec){
-    var m = Math.floor(sec / 60), s = sec % 60;
-    return m + ":" + (s < 10 ? "0" + s : s);
-  }
-  function charCount(s){ return String(s).replace(/\s/g, "").length; }
-
-  /* ===== 语义识别 ===== */
+  /* ===== 语义分类 ===== */
   var NUM = /(\d[\d,.]*\s*(元|块|万|千|平|个月|年|次|天)|多摊|滞纳金|几万|几千|百分之|一成|三成)/;
+  var RULE = /(必须|不能|不得|要|得|规定|卡住|过户|税|产权|备案|违|罚)/;
+  var METHOD = /(第一件事|先做|先看|先去|怎么查|怎么做|带看|核对|记得|别省|步骤|台账|清单|流程|看三页)/;
+  var EXP = /(客户|销售|中介|带看|我碰|我遇|我见|他说|她说|问我)/;
+
+  function contentType(t){
+    if (NUM.test(t)) return "num";
+    if (RULE.test(t)) return "rule";
+    if (METHOD.test(t)) return "method";
+    if (EXP.test(t)) return "exp";
+    return "plain";
+  }
 
   function detectRole(idea){
     var t = idea.t, d = idea.d, s = t + " " + d;
     if (/(原话|客户说|客户问|他问|她问|问我|说了句)/.test(s)) return "pain";
-    if (/(第一件事|先做|先看|先去|怎么查|怎么做|带看|核对|记得|别省|步骤|台账|清单|流程)/.test(t)) return "solve";
+    if (METHOD.test(t)) return "solve";
     if (/(越.{0,8}越|其实不是|反过来|真正的问题|不是.{0,6}是|说白了|根子在)/.test(t)) return "turn";
-    if (/(行吧|算了|离谱|魔幻)/.test(t)) return "joke";
     if (/(不容易|心疼|熬|扛|舍不得|不敢)/.test(t)) return "empathy";
     if (NUM.test(s)) return "amplify";
     return "default";
   }
 
   function reconcile(sem, pos, p){
-    if (sem === "solve" && p < 0.62) return "info";
-    if (sem === "turn" && p < 0.35) return "info";
-    if (sem === "amplify" && p < 0.15) return "pain";
-    if (sem === "joke" && p < 0.2) return "pain";
-    if (sem === "pain" && p > 0.78) return "empathy";
-    if (sem === "amplify" && p > 0.8) return "info";
+    if (sem === "solve" && p < 0.6) return "info";
+    if (sem === "turn" && p < 0.3) return "info";
     if (sem === "default") return pos;
     return sem;
   }
 
   function buildSequence(n){
     var seq = [], turnUsed = false;
-    for (var i = 0; i < n; i++){
-      var p = n <= 1 ? 0.5 : i / (n - 1), r;
-      if (p < 0.34) r = (i % 3 === 2) ? "joke" : "pain";
-      else if (p < 0.55) r = (i % 3 === 1) ? "empathy" : "amplify";
-      else if (!turnUsed && p < 0.7) { r = "turn"; turnUsed = true; }
-      else if (p < 0.86) r = (i % 3 === 2) ? "joke" : "solve";
-      else r = (i % 2 === 0) ? "info" : "empathy";
+    for (var i=0;i<n;i++){
+      var p = n<=1?0.5:i/(n-1), r;
+      if (p < 0.3) r = (i%3===2) ? "joke" : "pain";
+      else if (p < 0.5) r = (i%3===1) ? "empathy" : "amplify";
+      else if (!turnUsed && p < 0.68) { r = "turn"; turnUsed = true; }
+      else if (p < 0.88) r = (i%3===2) ? "joke" : "solve";
+      else r = "info";
       seq.push(r);
     }
-    if (!turnUsed && n >= 3) seq[Math.floor(n * 0.6)] = "turn";
+    if (!turnUsed && n >= 3) seq[Math.floor(n*0.6)] = "turn";
     return seq;
   }
 
-  function assignRoles(items, seed){
-    var n = items.length;
-    var pos = buildSequence(n);
-    var roles = items.map(function(it, i){
+  function assignRoles(items){
+    var n = items.length, pos = buildSequence(n);
+    var roles = items.map(function(it,i){
       if (it.forced) return it.forced;
-      var p = n <= 1 ? 0.5 : i / (n - 1);
-      return reconcile(detectRole(it), pos[i], p);
+      return reconcile(detectRole(it), pos[i], n<=1?0.5:i/(n-1));
     });
-    var firstTurn = roles.indexOf("turn");
-    var j;
-    if (firstTurn > -1){
-      for (j = 0; j < firstTurn; j++) if (roles[j] === "solve" && !items[j].forced) roles[j] = "info";
-    } else {
-      for (j = 0; j < roles.length; j++) if (roles[j] === "solve" && !items[j].forced && j / Math.max(1, roles.length - 1) < 0.6) roles[j] = "info";
-    }
+    var ft = roles.indexOf("turn"), j;
+    if (ft > -1){ for (j=0;j<ft;j++) if (roles[j]==="solve" && !items[j].forced) roles[j] = "info"; }
     var seen = false;
-    roles = roles.map(function(r){
-      if (r === "turn"){ if (seen) return "info"; seen = true; }
-      return r;
-    });
-    for (var i = 2; i < roles.length; i++){
-      if (roles[i] === roles[i-1] && roles[i-1] === roles[i-2] && !items[i-1].forced){
-        roles[i-1] = (roles[i-1] === "empathy") ? "info" : "empathy";
+    roles = roles.map(function(r){ if (r==="turn"){ if (seen) return "info"; seen = true; } return r; });
+    for (var i=2;i<roles.length;i++){
+      if (roles[i]===roles[i-1] && roles[i-1]===roles[i-2] && !items[i-1].forced){
+        roles[i-1] = (roles[i-1]==="empathy") ? "info" : "empathy";
       }
-    }
-    if (roles.indexOf("turn") === -1 && roles.length >= 3){
-      var k = Math.floor(roles.length * 0.6);
-      if (roles[k] !== "solve") roles[k] = "turn";
     }
     return roles;
   }
 
-  /* ===== 三句台词 ===== */
-  function clip(str, n){
-    var s = String(str).replace(/[。！？]+$/g, "").trim();
-    if (s.length <= n + 6) return s;
-    var cut = s.slice(0, n + 6);
-    var p = Math.max(cut.lastIndexOf("，"), cut.lastIndexOf("："), cut.lastIndexOf("、"), cut.lastIndexOf(" "));
-    if (p >= 8) return cut.slice(0, p);
-    return cut;
-  }
-
-  function proOf(text, detail){
-    var t = clip(text, 20);
-    if (detail && (t.length + detail.length) <= 26) return t + "，" + clip(detail, 10) + "。";
+  /* ===== 三句：判断 → 翻译 → 情绪 ===== */
+  function proOf(idea){
+    var t = clip(idea.t, 20), d = idea.d;
+    if (d && (t.length + d.length) <= 26) return t + "，" + clip(d, 10) + "。";
     return t + "。";
   }
 
-  var PLAIN2 = {
-    pain:    ["说白了，这坑专挑第一次买房的人。", "说白了，这话销售不会主动说。"],
-    amplify: ["说白了，最后都是你自己掏。", "说白了，这是笔隐形的账。"],
-    solve:   ["说白了，多看两眼就能避开。", "说白了，就是多走一趟的事。"],
-    turn:    ["说白了，反过来想就通了。", "说白了，别只听一半。"],
-    info:    ["说白了，这是一条能省钱的常识。", "说白了，知道的人不多。"],
-    empathy: ["说白了，谁摊上都憋气。", "说白了，换谁都难受。"],
-    joke:    ["说白了，这事挺荒诞。", "说白了，听着离谱但是真的。"],
-    hook:    ["说白了，就一句话的事。"],
-    after:   ["说白了，先记住这一条。"]
-  };
-
-  function plainOf(text, detail, pro, role, seed, i){
-    var src = String(text), hit = false;
-    Object.keys(PLAIN).forEach(function(k){
-      if (src.indexOf(k) > -1){ src = src.replace(k, PLAIN[k]); hit = true; }
-    });
+  function plainOf(idea, pro, role){
+    var t = idea.t, d = idea.d, src = String(t), hit = false;
+    Object.keys(PLAIN).forEach(function(k){ if (src.indexOf(k) > -1){ src = src.replace(k, PLAIN[k]); hit = true; } });
     var cand = "";
     if (hit){
-      var a = src.replace(/[。，、：]/g, ""), b = String(text).replace(/[。，、：]/g, "");
+      var a = src.replace(/[。，、：]/g,""), b = t.replace(/[。，、：]/g,"");
       if (Math.abs(a.length - b.length) > 4) cand = "说白了，" + clip(src, 16) + "。";
     }
-    if (!cand && detail && pro.indexOf(clip(detail, 10)) === -1){
-      cand = "说白了，" + clip(detail, 14) + "。";
-    }
+    if (!cand && d && pro.indexOf(clip(d, 10)) === -1) cand = "说白了，" + clip(d, 14) + "。";
+    if (cand && usedPlain[cand]) cand = "";
     if (!cand){
-      var pool = PLAIN2[role] || PLAIN2.info;
-      cand = pick(pool, seed, i + 6);
+      var pool = {
+        pain: ["说白了，这事专坑第一次买房的人。","说白了，没人会主动提醒你。"],
+        amplify: ["说白了，最后都是你自己掏。","说白了，这笔钱没人替你出。"],
+        turn: ["说白了，反过来想就通了。","说白了，别只听一半。"],
+        solve: ["说白了，多走一趟的事。","说白了，多看两眼就避开。"],
+        info: ["说白了，这是条能省钱的常识。","说白了，知道的人不多。"],
+        empathy: ["说白了，换谁都受不了。","说白了，这口气咽不下去。"],
+        joke: ["说白了，这事挺荒诞。","说白了，听着离谱但是真的。"],
+        hook: ["说白了，就一句话。"], after: ["说白了，先记住这条。"]
+      }[role] || ["说白了，就这么回事。"];
+      cand = pool[0];
+      if (usedPlain[cand]) cand = "";
     }
+    if (cand) usedPlain[cand] = 1;
     return cand;
   }
 
-  function funOf(role, seed, i){
-    if (role === "solve") return "照着做，能省一笔。";
-    return pick(FUN, seed, i + 4);
+  function funOf(idea, role, allow){
+    if (!allow) return "";
+    var type = contentType(idea.t + " " + idea.d);
+    var pool = (FUN[type] || FUN.plain).slice();
+    for (var i=0;i<pool.length;i++){
+      if (!usedFun[pool[i]]){ usedFun[pool[i]] = 1; return pool[i]; }
+    }
+    return "";
   }
 
-  function triSet(idea, role, seed, i){
-    var t = idea.t, d = idea.d;
-    var pro = proOf(t, d);
-    return [pro, plainOf(t, d, pro, role, seed, i), funOf(role, seed, i)];
+  function triSet(idea, role, allowFun){
+    var pro = proOf(idea);
+    return [pro, plainOf(idea, pro, role), funOf(idea, role, allowFun)];
   }
 
   /* ===== 解析 ===== */
-  var TAGMAP = {
-    "痛点":"pain","放大":"amplify","代价":"amplify","转折":"turn","解法":"solve","路径":"solve",
-    "梗":"joke","共情":"empathy","信息":"info","爽点":"solve","钩子":"hook"
-  };
+  var TAGMAP = {"痛点":"pain","放大":"amplify","代价":"amplify","转折":"turn","解法":"solve","路径":"solve",
+                "梗":"joke","共情":"empathy","信息":"info","爽点":"solve","钩子":"hook"};
 
   function parseItems(raw){
     return String(raw).split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(line){
@@ -516,41 +484,39 @@ textarea{resize:vertical;line-height:1.9}
       return {t: strip(parts[0]), d: parts[1] ? strip(parts.slice(1).join("｜")) : "", forced: forced};
     }).filter(function(x){ return x.t.length > 0; });
   }
-
   function parseLines(raw){
     return String(raw).split(/\r?\n/).map(function(l){ return strip(l); }).filter(Boolean);
   }
 
   /* ===== 生成 ===== */
   var state = {type:"talk", dur:60, units:[], total:0, topic:"", account:"", seed:7};
-  var usedTrans = {};
+  var usedLead = {}, usedPlain = {}, usedFun = {};
 
-  function uniqueTrans(role, seed, salt){
-    var pool = TRANS[role], idx = Math.abs(seed + salt * 7) % pool.length;
-    if (usedTrans[pool[idx]]) idx = (idx + 1) % pool.length;
-    usedTrans[pool[idx]] = 1;
-    return pool[idx];
+  function leadFor(role, seed, i){
+    var pool = LEADS[role] || [""];
+    var idx = Math.abs(seed + i*3) % pool.length;
+    if (pool[idx] && usedLead[pool[idx]]) idx = (idx+1) % pool.length;
+    var v = pool[idx];
+    if (v) usedLead[v] = 1;
+    return v;
   }
 
   function slotOf(role){
     if (role === "hook") return "a";
     if (role === "after") return "e";
     if (role === "solve" || role === "info") return "c";
-    if (role === "joke" || role === "empathy") return "d";
-    if (role === "turn") return "d";
+    if (role === "turn" || role === "joke" || role === "empathy") return "d";
     return "b";
   }
 
-  function makeUnit(role, seed, i, type){
-    var key = slotOf(role);
-    var shot = pick(SHOTS[type][key], seed, i + 2);
-    return {role: role, shot: shot.shot, exp: shot.exp, act: shot.act, emo: shot.emo, warn: ""};
+  function stageUnit(role, seed, i, type){
+    var s = pick(SHOTS[type][slotOf(role)], seed, i+2);
+    return {role:role, shot:s.shot, exp:s.exp, act:s.act, emo:s.emo, warn:""};
   }
 
   function build(){
-    usedTrans = {};
-    var type = state.type;
-    var seed = state.seed;
+    usedLead = {}; usedPlain = {}; usedFun = {};
+    var type = state.type, seed = state.seed;
     var tone = document.getElementById("tone").value;
     var manualHook = strip(document.getElementById("hook").value);
     var cta = strip(document.getElementById("cta").value);
@@ -559,106 +525,94 @@ textarea{resize:vertical;line-height:1.9}
     var spots = parseLines(document.getElementById("spots").value);
     var questions = parseLines(document.getElementById("questions").value);
 
-    if (type === "tour" && !spots.length) return {error:"探盘需要先填路线点位。"};
-    if (type === "interview" && !questions.length) return {error:"采访需要先填提问清单。"};
+    if (type === "tour" && !spots.length) return {error:"探盘要先填路线点位。"};
+    if (type === "interview" && !questions.length) return {error:"采访要先填提问清单。"};
     if (type !== "interview" && !ideas.length) return {error:"先写几条核心内容。"};
 
-    var units = [];
-    var i;
+    var units = [], i;
 
     /* 钩子 */
     var hookText;
     if (manualHook) hookText = manualHook;
     else if (type === "tour") hookText = "这个盘我走了" + spots.length + "站，最值得停的是这一站。";
-    else if (type === "interview") hookText = "我把这个盘的营销总按在椅子上，问了" + questions.length + "个不好回答的问题。";
-    else hookText = pick(["先说结论：" + ideas[0].t + "。", "很多人第一句就听反了：" + ideas[0].t + "。"], seed, 1);
-    var hu = makeUnit("hook", seed, 0, type);
-    hu.parts = [hookText, "", ""];
-    hu.line = hookText;
+    else if (type === "interview") hookText = "我把这个盘的营销总按住了，问了" + questions.length + "个不好回答的问题。";
+    else hookText = "先说结论：" + clip(ideas[0].t, 18) + "。";
+    var hu = stageUnit("hook", seed, 0, type);
+    hu.lead = ""; hu.parts = [hookText, "", ""];
     units.push(hu);
 
     var body = [];
 
     if (type === "talk"){
-      var roles = assignRoles(ideas.slice(1), seed);
-      ideas.slice(1).forEach(function(idea, k){
+      var items = ideas.slice(1);
+      var roles = assignRoles(items);
+      items.forEach(function(idea, k){
         var role = roles[k];
-        var u = makeUnit(role, seed, k + 1, type);
-        u.parts = triSet(idea, role, seed, k + 1, "");
-        u.role = role;
+        var u = stageUnit(role, seed, k+1, type);
+        u.parts = triSet(idea, role, role === "joke" || k % 4 === 2);
         body.push(u);
       });
     }
 
     if (type === "tour"){
-      var pool = ideas;
+      var targetCount = Math.round(state.dur / 8);
+      var perSpot = Math.max(2, Math.min(8, Math.ceil((targetCount - 2) / Math.max(1, spots.length))));
       var idx = 0;
-      var targetCount = Math.round(state.dur / 7.5);
-      var perSpot = Math.max(2, Math.min(10, Math.ceil((targetCount - 2) / Math.max(1, spots.length))));
       spots.forEach(function(spot, si){
-        var per = perSpot;
-        for (var p = 0; p < per; p++){
-          var idea = pool[idx % pool.length]; idx++;
-          var role = p === 0 ? "pain" : (si % 3 === 2 ? "empathy" : "solve");
-          if (si === 0 && p === 0) role = "pain";
-          if (si === spots.length - 1 && p === per - 1) role = "empathy";
-          var u2 = makeUnit(role, seed, si * 3 + p + 1, type);
-          u2.parts = triSet(idea, role, seed, si * 3 + p + 2);
-          u2.role = role;
-          u2.spot = spot;
-          body.push(u2);
+        for (var p=0;p<perSpot;p++){
+          var idea = ideas[idx % ideas.length]; idx++;
+          var role = p === 0 ? "pain" : (p === perSpot-1 ? "solve" : (si % 2 ? "amplify" : "info"));
+          if (si === spots.length-1 && p === perSpot-1) role = "empathy";
+          var u = stageUnit(role, seed, si*4+p+1, type);
+          u.parts = triSet(idea, role, role === "joke" || p === 1);
+          u.spot = spot;
+          body.push(u);
         }
       });
-      /* 中间插一个转折 */
-      if (body.length >= 4){
-        var tpos = Math.floor(body.length * 0.55);
-        if (body[tpos].role !== "empathy") body[tpos].role = "turn";
-      }
     }
 
     if (type === "interview"){
       questions.forEach(function(q, qi){
-        var u3 = makeUnit(qi === 0 ? "pain" : (qi === questions.length - 1 ? "turn" : "info"), seed, qi + 1, type);
-        u3.role = "info";
-        u3.qa = {q: q, a: "（营销总的回答，现场记录）"};
-        u3.parts = [q, "", ""];
-        u3.line = q;
-        body.push(u3);
+        var u = stageUnit(qi===0?"pain":"info", seed, qi+1, type);
+        u.qa = {q:q, a:"（营销总的回答，现场记录）"};
+        u.parts = [q,"",""];
+        body.push(u);
       });
     }
 
+    /* 串联：每个单元以上一个单元的过渡句开口 */
+    var prev = units[0];
+    body.forEach(function(u, k){
+      u.lead = (k % 3 === 0) ? leadFor(u.role, seed, k+1) : "";
+      prev = u;
+    });
+
     units = units.concat(body);
 
-    /* 余味 */
     var tail = tone === "sharp" ? "别嫌我说话直。" : (tone === "warm" ? "不着急，慢慢看。" : "");
     var afterText = cta || (topic + "，就讲到这。" + tail + (type === "interview" ? "下条我把剩下的问题也问了。" : "评论区留小区名，我看你那套。"));
-    var au = makeUnit("after", seed, units.length + 1, type);
-    au.parts = [afterText, "", ""];
-    au.line = afterText;
+    var au = stageUnit("after", seed, units.length+1, type);
+    au.lead = ""; au.parts = [afterText, "", ""];
     units.push(au);
 
-    /* 台词合成 + 时长 */
+    /* 时间轴 */
     var t = 0;
-    units.forEach(function(u, k){
-      if (u.qa) u.line = u.qa.q;
-      else if (u.parts) u.line = u.parts.filter(Boolean).join(" ");
-      var chars = charCount(u.line || "");
-      var dur;
-      if (u.role === "hook") dur = Math.max(3, Math.min(6, Math.round(chars / 4.5) || 4));
-      else if (u.role === "after") dur = Math.max(4, Math.min(8, Math.round(chars / 4.5) || 5));
-      else dur = Math.max(5, Math.min(11, Math.round(chars / 4.5) || 7));
+    units.forEach(function(u){
+      var text = (u.lead || "") + u.parts.filter(Boolean).join("");
+      if (u.qa) text = u.qa.q;
+      u.line = text;
+      var chars = cc(text), dur;
+      if (u.role === "hook") dur = Math.max(3, Math.min(6, Math.round(chars/4.5)||4));
+      else if (u.role === "after") dur = Math.max(4, Math.min(8, Math.round(chars/4.5)||5));
+      else dur = Math.max(5, Math.min(11, Math.round(chars/4.5)||7));
       if (u.qa){
-        var qd = Math.max(3, Math.min(5, Math.round(charCount(u.qa.q) / 4.5) || 3));
-        var ad = Math.max(5, Math.min(10, Math.round(charCount(u.qa.a || "") / 4.5) || 6));
+        var qd = Math.max(3, Math.min(5, Math.round(cc(u.qa.q)/4.5)||3));
+        var ad = Math.max(5, Math.min(10, Math.round(cc(u.qa.a||"")/4.5)||6));
         dur = qd + ad;
       }
       u.dur = dur; u.chars = chars; u.start = t; t += dur; u.end = t;
-      u.trans = uniqueTrans(u.role, seed, k + 5);
-      if (!u.qa && u.role !== "hook" && u.role !== "after" && chars > 52){
-        u.warn = "三句一共 " + chars + " 字，10 秒说不完，砍掉半句。";
-      }
-      if (u.qa && charCount(u.qa.a || "") > 60){
-        u.warn = "回答偏长，剪辑时切成两句，或让营销总一句话说完。";
+      if (!u.qa && u.role !== "hook" && u.role !== "after" && chars > 58){
+        u.warn = "这段 " + chars + " 字，超过 11 秒，砍掉半句或拆成两个单元。";
       }
     });
 
@@ -669,26 +623,32 @@ textarea{resize:vertical;line-height:1.9}
     return {units: units};
   }
 
+  function fullScript(){
+    return state.units.map(function(u){
+      if (u.qa) return "我问：" + u.qa.q + "\n他说：" + u.qa.a;
+      return (u.lead || "") + u.parts.filter(Boolean).join("");
+    }).join("\n\n");
+  }
+
   /* ===== 渲染 ===== */
   function render(){
     var r = build();
     var out = document.getElementById("output");
     if (r.error){
       out.innerHTML = '<div class="empty">' + esc(r.error) + '</div>';
-      document.getElementById("status").textContent = "需补充内容";
+      document.getElementById("status").textContent = "需补内容";
       return;
     }
     var units = state.units, total = state.total;
-    var targetCount = Math.round(state.dur / 7.5);
+    var targetCount = Math.round(state.dur / 8);
     var diff = units.length - targetCount;
 
-    var stats = '' +
-      '<div class="stats">' +
-        '<div class="stat"><div class="k">总时长</div><div class="v">' + total + '<small>秒</small></div></div>' +
-        '<div class="stat"><div class="k">单元数</div><div class="v">' + units.length + '</div></div>' +
-        '<div class="stat"><div class="k">目标时长</div><div class="v">' + state.dur + '<small>秒</small></div></div>' +
-        '<div class="stat"><div class="k">目标单元</div><div class="v" style="color:' + (diff < 0 ? "var(--accent)" : "inherit") + '">' + targetCount + '</div></div>' +
-      '</div>';
+    var stats = '<div class="stats">' +
+      '<div class="stat"><div class="k">总时长</div><div class="v">' + total + '<small>秒</small></div></div>' +
+      '<div class="stat"><div class="k">单元数</div><div class="v">' + units.length + '</div></div>' +
+      '<div class="stat"><div class="k">目标时长</div><div class="v">' + state.dur + '<small>秒</small></div></div>' +
+      '<div class="stat"><div class="k">目标单元</div><div class="v" style="color:' + (diff<0?"var(--accent)":"inherit") + '">' + targetCount + '</div></div>' +
+    '</div>';
 
     var beats = '<div class="beats">' + units.map(function(u){
       var rr = ROLE[u.role];
@@ -700,65 +660,62 @@ textarea{resize:vertical;line-height:1.9}
     }).join("") + '</div>';
 
     var cards = units.map(function(u, i){
-      var rr = ROLE[u.role];
-      var num = (i + 1 < 10 ? "0" : "") + (i + 1);
-      var bodyHtml;
+      var rr = ROLE[u.role], num = (i+1<10?"0":"") + (i+1);
+      var body;
       if (u.qa){
-        bodyHtml = '<p class="qa-q" contenteditable="true" data-f="qa.q"><b>我问</b>' + esc(u.qa.q) + '</p>' +
-                   '<p class="qa-a" contenteditable="true" data-f="qa.a"><b>他说</b>' + esc(u.qa.a) + '</p>';
-      } else if (u.parts && u.parts[1]){
-        bodyHtml = '<p class="ln p1" contenteditable="true" data-k="专业" data-f="p0">' + esc(u.parts[0]) + '</p>' +
-                   '<p class="ln" contenteditable="true" data-k="白话" data-f="p1">' + esc(u.parts[1]) + '</p>' +
-                   '<p class="ln" contenteditable="true" data-k="幽默" data-f="p2">' + esc(u.parts[2]) + '</p>';
+        body = '<p class="qa-q" contenteditable="true" data-f="qa.q"><b>我问</b>' + esc(u.qa.q) + '</p>' +
+               '<p class="qa-a" contenteditable="true" data-f="qa.a"><b>他说</b>' + esc(u.qa.a) + '</p>';
+      } else if (u.parts[1]){
+        body = '<p class="ln" data-k="接" contenteditable="true" data-f="lead">' + esc(u.lead || "") + '</p>' +
+               '<p class="ln p1" data-k="专业" contenteditable="true" data-f="p0">' + esc(u.parts[0]) + '</p>' +
+               '<p class="ln" data-k="白话" contenteditable="true" data-f="p1">' + esc(u.parts[1]) + '</p>' +
+               '<p class="ln" data-k="幽默" contenteditable="true" data-f="p2">' + esc(u.parts[2]) + '</p>';
       } else {
-        bodyHtml = '<p class="ln p1" contenteditable="true" data-k="台词" data-f="p0">' + esc(u.line) + '</p>';
+        body = '<p class="ln p1" data-k="台词" contenteditable="true" data-f="p0">' + esc(u.parts[0]) + '</p>';
       }
-      return '' +
-      '<article class="unit" data-i="' + i + '" style="--rail:' + rr.color + '">' +
+      return '<article class="unit" data-i="' + i + '" style="--rail:' + rr.color + '">' +
         '<div class="unit-head">' +
           '<span class="idx">' + num + '</span>' +
           '<span class="tag" style="color:' + rr.color + '">' + rr.tag + '</span>' +
           (u.spot ? '<span class="spot">' + esc(u.spot) + '</span>' : '') +
           '<span class="dur">' + u.dur + ' 秒 · ' + u.chars + ' 字</span>' +
           '<span class="time">' + fmtTime(u.start) + ' – ' + fmtTime(u.end) + '</span>' +
-        '</div>' +
-        bodyHtml +
-        (u.role === "after" ? "" : '<p class="hookline"><b>最后1秒</b>' + esc(u.trans) + '</p>') +
+        '</div>' + body +
         '<div class="meta">' +
           '<div><div class="k">镜头</div><div class="v" contenteditable="true" data-f="shot">' + esc(u.shot) + '</div></div>' +
           '<div><div class="k">表情</div><div class="v" contenteditable="true" data-f="exp">' + esc(u.exp) + '</div></div>' +
           '<div><div class="k">动作</div><div class="v" contenteditable="true" data-f="act">' + esc(u.act) + '</div></div>' +
           '<div><div class="k">情绪</div><div class="v" contenteditable="true" data-f="emo">' + esc(u.emo) + '</div></div>' +
-        '</div>' +
-        (u.warn ? '<div class="warn">' + esc(u.warn) + '</div>' : "") +
+        '</div>' + (u.warn ? '<div class="warn">' + esc(u.warn) + '</div>' : "") +
       '</article>';
     }).join("");
 
     var typeName = {talk:"口播", tour:"探盘", interview:"采访"}[state.type];
-    var tip = diff < 0
-      ? '<div class="warn" style="margin-bottom:18px">还差 ' + (-diff) + ' 个单元才够 ' + state.dur + ' 秒：口播就多加几条观点，探盘就加点位，采访就加问题。</div>'
-      : '';
+    var tip = "";
+    if (diff < 0){
+      tip = '<div class="warn" style="margin-bottom:16px">还差 ' + (-diff) + ' 个单元才到 ' + state.dur + ' 秒：口播加观点，探盘加点位，采访加问题。</div>';
+    } else if (total > state.dur * 1.15){
+      tip = '<div class="warn" style="margin-bottom:16px">超出目标 ' + (total - state.dur) + ' 秒：删掉 ' + diff + ' 个单元，或把最长的几句砍半。</div>';
+    }
 
-    out.innerHTML = '' +
+    out.innerHTML =
       '<div class="doc-head">' +
-        '<div class="kicker">' + esc(state.account) + ' · ' + typeName + ' · 可拍摄脚本</div>' +
+        '<div class="kicker">' + esc(state.account) + ' · ' + typeName + '</div>' +
         '<h2>' + esc(state.topic) + '</h2>' +
-        '<div class="meta-line">总时长 ' + total + ' 秒　/　' + units.length + ' 个单元　/　每单元 5–10 秒，只承担一个功能</div>' +
+        '<div class="meta-line">' + total + ' 秒　/　' + units.length + ' 个单元　/　每单元只干一件事</div>' +
       '</div>' +
       '<div class="toolbar">' +
-        '<button class="btn ghost" id="copyBtn">复制全文</button>' +
+        '<button class="btn ghost" id="copyScriptBtn">复制口播稿</button>' +
+        '<button class="btn ghost" id="copyBtn">复制分镜表</button>' +
         '<button class="btn ghost" id="mdBtn">下载 Markdown</button>' +
         '<button class="btn ghost" id="printBtn">打印 / 存 PDF</button>' +
       '</div>' +
       stats + tip +
-      '<div class="sec-title">节拍骨架</div>' + beats + legend +
+      '<div class="sec-title">口播稿（照着念）</div>' +
+      '<div class="script-full" id="fullScript">' + esc(fullScript()).replace(/\n\n/g, '</p><p class="para">').replace(/^/, '<p class="para">') + '</p></div>' +
+      '<div class="sec-title" style="margin-top:26px">节拍骨架</div>' + beats + legend +
       '<div class="sec-title">分镜单元</div>' + cards +
-      '<div class="note">' +
-        '<b>骨架：</b>六拍结构（钩子 → 痛点 → 放大 → 转折 → 解法 → 余味），解法压在六成之后。<br>' +
-        '<b>三句结构：</b>专业句给硬信息，白话句给翻译，幽默句给气口——8 秒刚好落地。<br>' +
-        '<b>三条硬检查：</b>' +
-        '<ol><li>每单元只干一件事。</li><li>每 3 个单元（15–30 秒）完成一次痛点 → 爽点 → 梗或共情的小循环。</li><li>每单元最后一秒留过渡钩子。</li></ol>' +
-      '</div>';
+      '<div class="note"><b>写法依据：</b>一句一个意思，句长控制在 22 字内；每单元开口先给连接词，观众不能回看，逻辑必须显性；结论前置，解法压在六成之后。</div>';
 
     document.getElementById("status").textContent = typeName + " · " + total + "秒 / " + units.length + "单元";
 
@@ -766,18 +723,22 @@ textarea{resize:vertical;line-height:1.9}
       var i = Number(el.dataset.i);
       el.querySelectorAll("[contenteditable]").forEach(function(node){
         node.addEventListener("input", function(){
-          var f = node.dataset.f;
-          if (f === "qa.q") state.units[i].qa.q = node.textContent.trim();
-          else if (f === "qa.a") state.units[i].qa.a = node.textContent.trim();
-          else if (f === "p0") state.units[i].parts[0] = node.textContent.trim();
-          else if (f === "p1") state.units[i].parts[1] = node.textContent.trim();
-          else if (f === "p2") state.units[i].parts[2] = node.textContent.trim();
-          else state.units[i][f] = node.textContent.trim();
+          var f = node.dataset.f, v = node.textContent.trim();
+          if (f === "qa.q") state.units[i].qa.q = v;
+          else if (f === "qa.a") state.units[i].qa.a = v;
+          else if (f === "lead") state.units[i].lead = v;
+          else if (f === "p0") state.units[i].parts[0] = v;
+          else if (f === "p1") state.units[i].parts[1] = v;
+          else if (f === "p2") state.units[i].parts[2] = v;
+          else state.units[i][f] = v;
+          var fs = document.getElementById("fullScript");
+          if (fs) fs.innerHTML = esc(fullScript()).replace(/\n\n/g, '</p><p class="para">').replace(/^/, '<p class="para">') + '</p>';
         });
       });
     });
 
-    document.getElementById("copyBtn").onclick = copyAll;
+    document.getElementById("copyScriptBtn").onclick = function(){ copyText(fullScript()); };
+    document.getElementById("copyBtn").onclick = function(){ copyText(toMarkdown()); };
     document.getElementById("mdBtn").onclick = downloadMd;
     document.getElementById("printBtn").onclick = function(){ window.print(); };
     save();
@@ -785,46 +746,32 @@ textarea{resize:vertical;line-height:1.9}
 
   /* ===== 导出 ===== */
   function toMarkdown(){
-    var L = [];
-    L.push("# " + state.topic);
-    L.push("");
-    L.push("总时长 " + state.total + " 秒｜" + state.units.length + " 个单元｜账号 " + state.account);
-    L.push("");
-    state.units.forEach(function(u, i){
-      var rr = ROLE[u.role], num = (i + 1 < 10 ? "0" : "") + (i + 1);
-      L.push("## " + num + "｜" + rr.tag + (u.spot ? "｜" + u.spot : "") + "｜" + fmtTime(u.start) + " – " + fmtTime(u.end) + "（" + u.dur + " 秒）");
-      L.push("");
-      if (u.qa){
-        L.push("我问：" + u.qa.q);
-        L.push("他说：" + u.qa.a);
-      } else if (u.parts && u.parts[1]){
-        L.push("台词（专业）：" + u.parts[0]);
-        L.push("台词（白话）：" + u.parts[1]);
-        L.push("台词（幽默）：" + u.parts[2]);
-      } else {
-        L.push("台词：" + (u.line || ""));
+    var L = ["# " + state.topic, "", "总时长 " + state.total + " 秒｜" + state.units.length + " 个单元｜账号 " + state.account, "", "## 口播稿", ""];
+    L.push(fullScript());
+    L.push("", "## 分镜", "");
+    state.units.forEach(function(u,i){
+      var rr = ROLE[u.role], num = (i+1<10?"0":"")+(i+1);
+      L.push("### " + num + "｜" + rr.tag + (u.spot?"｜"+u.spot:"") + "｜" + fmtTime(u.start) + "–" + fmtTime(u.end) + "（" + u.dur + "秒）");
+      if (u.qa){ L.push("我问：" + u.qa.q); L.push("他说：" + u.qa.a); }
+      else {
+        if (u.lead) L.push("接：" + u.lead);
+        L.push("台词：" + u.parts.filter(Boolean).join(""));
       }
-      L.push("");
       L.push("镜头：" + u.shot);
-      L.push("表情：" + u.exp);
-      L.push("动作：" + u.act);
-      L.push("情绪：" + u.emo);
-      if (u.role !== "after" && u.trans) L.push("最后1秒：" + u.trans);
-      if (u.warn) L.push("提示：" + u.warn);
+      L.push("表情：" + u.exp + "｜动作：" + u.act + "｜情绪：" + u.emo);
       L.push("");
     });
     return L.join("\n");
   }
 
-  function copyAll(){
-    var text = toMarkdown();
+  function copyText(text){
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(function(){ flash("已复制"); }, function(){ fallbackCopy(text); });
-    } else fallbackCopy(text);
+      navigator.clipboard.writeText(text).then(function(){ flash("已复制"); }, function(){ fb(text); });
+    } else fb(text);
   }
-  function fallbackCopy(text){
+  function fb(text){
     var ta = document.createElement("textarea");
-    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
     document.body.appendChild(ta); ta.select();
     try { document.execCommand("copy"); flash("已复制"); } catch(e){ flash("复制失败"); }
     document.body.removeChild(ta);
@@ -833,7 +780,7 @@ textarea{resize:vertical;line-height:1.9}
     var blob = new Blob([toMarkdown()], {type:"text/markdown;charset=utf-8"});
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = (state.topic || "拍摄脚本") + ".md";
+    a.download = (state.topic || "口播稿") + ".md";
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 300);
     flash("已下载");
@@ -845,7 +792,7 @@ textarea{resize:vertical;line-height:1.9}
   }
 
   /* ===== 存储 ===== */
-  var KEY = "wenan-studio-v2";
+  var KEY = "wenan-studio-v3";
   function save(){
     try{
       localStorage.setItem(KEY, JSON.stringify({
@@ -865,7 +812,7 @@ textarea{resize:vertical;line-height:1.9}
   function restore(){
     var raw = null;
     try{ raw = localStorage.getItem(KEY); }catch(e){}
-    if (!raw) return;
+    if (!raw){ syncTypeFields(); return; }
     try{
       var d = JSON.parse(raw);
       ["account","topic","persona","ideas","spots","questions","tone","hook","cta"].forEach(function(k){
@@ -873,25 +820,19 @@ textarea{resize:vertical;line-height:1.9}
       });
       if (d.type){
         state.type = d.type;
-        document.querySelectorAll("#typeChips .chip").forEach(function(c){
-          c.setAttribute("aria-pressed", String(c.dataset.type === d.type));
-        });
+        document.querySelectorAll("#typeChips .chip").forEach(function(c){ c.setAttribute("aria-pressed", String(c.dataset.type === d.type)); });
       }
       if (d.dur){
         state.dur = d.dur;
-        document.querySelectorAll("#durChips .chip").forEach(function(c){
-          c.setAttribute("aria-pressed", String(Number(c.dataset.sec) === d.dur));
-        });
+        document.querySelectorAll("#durChips .chip").forEach(function(c){ c.setAttribute("aria-pressed", String(Number(c.dataset.sec) === d.dur)); });
       }
     }catch(e){}
     syncTypeFields();
   }
 
-  /* ===== 类型切换 ===== */
   function syncTypeFields(){
     document.getElementById("spotsField").classList.toggle("hidden", state.type !== "tour");
     document.getElementById("questionsField").classList.toggle("hidden", state.type !== "interview");
-    document.getElementById("ideas").placeholder = state.type === "interview" ? "采访类型用不到这栏，可留空或写补充背景" : "一行一条核心观点";
   }
 
   document.querySelectorAll("#typeChips .chip").forEach(function(c){
@@ -899,27 +840,22 @@ textarea{resize:vertical;line-height:1.9}
       document.querySelectorAll("#typeChips .chip").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
       c.setAttribute("aria-pressed","true");
       state.type = c.dataset.type;
-      syncTypeFields();
-      save();
+      syncTypeFields(); save();
     });
   });
-
   document.querySelectorAll("#durChips .chip").forEach(function(c){
     c.addEventListener("click", function(){
       document.querySelectorAll("#durChips .chip").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
       c.setAttribute("aria-pressed","true");
-      state.dur = Number(c.dataset.sec);
-      save();
+      state.dur = Number(c.dataset.sec); save();
     });
   });
 
   document.getElementById("genBtn").addEventListener("click", function(){
-    state.seed = Math.floor(Math.random() * 997);
-    render();
+    state.seed = Math.floor(Math.random()*997); render();
   });
   document.getElementById("reshuffleBtn").addEventListener("click", function(){
-    state.seed = Math.floor(Math.random() * 997);
-    render();
+    state.seed = Math.floor(Math.random()*997); render();
   });
   ["account","topic","persona","ideas","spots","questions","tone","hook","cta"].forEach(function(id){
     var el = document.getElementById(id);
