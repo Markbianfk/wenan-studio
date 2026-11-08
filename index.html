@@ -110,6 +110,33 @@ textarea{resize:vertical;line-height:1.9}
 .note ol{margin:6px 0 0;padding-left:18px}
 
 
+.liblist{margin-top:10px}
+.librow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line-2);font-size:12px}
+.librow:first-child{border-top:0}
+.librow .lt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.librow .ld{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.librow button{background:none;border:0;color:var(--ink-3);font-size:11px;padding:0 4px}
+.librow button:hover{color:var(--accent)}
+.libempty{font-size:11px;color:var(--ink-3);padding:6px 0}
+.scorebox{display:flex;gap:26px;align-items:center;border:1px solid var(--line);background:#fff;padding:16px 20px;margin-bottom:14px;flex-wrap:wrap}
+.stotal{display:flex;flex-direction:column;align-items:flex-start;min-width:88px}
+.stotal b{font-size:34px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.stotal small{font-size:11px;color:var(--ink-3);margin-top:2px}
+.stotal span{font-size:10px;letter-spacing:.12em;color:var(--ink-3);margin-top:4px}
+.dims{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;min-width:280px}
+.dim .dk{font-size:10px;letter-spacing:.1em;color:var(--ink-3);margin-bottom:4px}
+.dim .dbar{height:3px;background:var(--line-2);margin-bottom:4px}
+.dim .dbar i{display:block;height:3px}
+.dim .dv{font-size:12px;font-variant-numeric:tabular-nums}
+.dim .dv small{color:var(--ink-3);font-size:10px}
+.issues{border:1px solid var(--line);background:#fff;padding:12px 16px;margin-bottom:22px}
+.issues .ih{font-size:10px;letter-spacing:.12em;color:var(--accent);margin-bottom:8px}
+.issues.pass{color:var(--ink-2);font-size:12.5px}
+.issue{display:flex;gap:10px;font-size:12px;line-height:1.7;padding:5px 0;border-top:1px solid var(--line-2);color:var(--ink-2);flex-wrap:wrap}
+.issue:first-of-type{border-top:0}
+.ino{font-family:var(--mono);color:var(--ink-3);min-width:22px}
+.itxt{flex:1;min-width:180px}
+.ifix{color:var(--accent)}
 .audit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;border:1px solid var(--line);background:#fff;padding:14px 18px;margin-bottom:22px}
 .audit .k{font-size:10px;letter-spacing:.12em;color:var(--ink-3);margin-bottom:3px}
 .audit .v{font-size:15px;font-weight:600}
@@ -251,6 +278,15 @@ textarea{resize:vertical;line-height:1.9}
 
     <div class="rule"></div>
 
+    <div class="field">
+      <label>自媒体文案库 <span class="sub">保存在本机，可导出进「得到大脑」</span></label>
+      <div class="actions" style="margin-top:0">
+        <button class="btn ghost" id="saveLibBtn">存入文案库</button>
+        <button class="btn ghost" id="exportBtn">导出终稿</button>
+      </div>
+      <div class="liblist" id="libList"></div>
+    </div>
+
     <div class="tips">
       <b>三种栏目：</b>口播按观点走；探盘按点位走，每点位 2–3 个单元；采访按问题走，一问一答。<br>
       <b>三句结构：</b>每单元拆成专业、大白话、幽默三句，8 秒刚好。<br>
@@ -391,6 +427,72 @@ textarea{resize:vertical;line-height:1.9}
     return {cv:cv, longest:longest, slop:slop, sentences:sents.length, mean:mean};
   }
 
+  /* ===== 评分 ===== */
+  function scoreAll(){
+    var units = state.units || [];
+    var issues = [];
+    if (!units.length) return {total:0, dims:[], issues:issues};
+
+    var s1 = 0, s2 = 0, s3 = 0, s4 = 0, s5 = 0;
+    var roles = {};
+    var withNum = 0;
+    var lens = [];
+
+    units.forEach(function(u, i){
+      var num = (i+1<10?"0":"")+(i+1);
+      var text = u.qa ? (u.qa.q + u.qa.a) : (u.lead||"") + u.parts.filter(Boolean).join("");
+      var sents = text.split(/[。！？\n]+/).map(function(x){return x.trim();}).filter(Boolean);
+      sents.forEach(function(x){ lens.push(cc(x)); });
+      roles[u.role] = 1;
+
+      /* 单点纯度 */
+      var okPur = sents.length <= 4 && cc(text) <= 62;
+      if (okPur) s1++;
+      else issues.push({n:num, txt:"单元偏重（" + cc(text) + " 字 / " + sents.length + " 句），像塞了两件事", fix:"砍掉一句，或拆成两个单元"});
+
+      /* 节拍 */
+      var lo = u.role === "hook" ? 3 : (u.role === "after" ? 4 : 5);
+      var hi = u.role === "hook" ? 6 : (u.role === "after" ? 8 : 10);
+      if (u.dur >= lo && u.dur <= hi) s2++;
+      else issues.push({n:num, txt:"时长 " + u.dur + " 秒，超出 " + lo + "–" + hi + " 秒节拍", fix:"增删半句，压回节拍内"});
+
+      /* 口语度 */
+      var bad = 0;
+      Object.keys(SLOP).forEach(function(k){ if (text.indexOf(k) > -1) bad++; });
+      sents.forEach(function(x){ if (cc(x) > 25) bad++; });
+      if (!bad) s4++;
+      else issues.push({n:num, txt:"有 " + bad + " 处书面或 AI 味（超长句或套话）", fix:"长句拆开，套话换大白话"});
+
+      /* 真实感 */
+      if (/\d/.test(text) || /(块|元|万|平|天|次|年|月)/.test(text)) withNum++;
+    });
+
+    /* 起伏 */
+    var n = lens.length || 1;
+    var mean = lens.reduce(function(a,b){return a+b;},0)/n;
+    var sd = Math.sqrt(lens.reduce(function(a,b){return a+(b-mean)*(b-mean);},0)/n);
+    var cv = mean ? sd/mean : 0;
+    var roleCount = Object.keys(roles).length;
+    if (cv >= 0.3) s3 += 10; else issues.push({n:"全文", txt:"句长太匀（起伏 " + cv.toFixed(2) + "），听着像节拍器", fix:"把长句拆成短句，短句后接一句长的"});
+    if (roleCount >= 5) s3 += 10; else issues.push({n:"全文", txt:"功能种类只有 " + roleCount + " 种，起伏不够", fix:"补一个梗或共情点"});
+
+    s1 = Math.round(s1 / units.length * 20);
+    s2 = Math.round(s2 / units.length * 20);
+    s3 = Math.round(s3);
+    s4 = Math.round(s4 / units.length * 20);
+    s5 = Math.round(Math.min(1, withNum / Math.max(1, units.length * 0.4)) * 20);
+
+    var total = s1 + s2 + s3 + s4 + s5;
+    var dims = [
+      {k:"单点纯度", v:s1, note:"一个单元只干一件事"},
+      {k:"节拍密度", v:s2, note:"每拍 5–10 秒"},
+      {k:"起伏", v:s3, note:"句长有长短，功能有变化"},
+      {k:"口语度", v:s4, note:"没有书面腔和 AI 味"},
+      {k:"具体度", v:s5, note:"有数字、有细节"}
+    ];
+    return {total:total, dims:dims, issues:issues};
+  }
+
   /* ===== 语义分类 ===== */
   var NUM = /(\d[\d,.]*\s*(元|块|万|千|平|个月|年|次|天)|多摊|滞纳金|几万|几千|百分之|一成|三成)/;
   var RULE = /(必须|不能|不得|要|得|规定|卡住|过户|税|产权|备案|违|罚)/;
@@ -509,8 +611,25 @@ textarea{resize:vertical;line-height:1.9}
   var TAGMAP = {"痛点":"pain","放大":"amplify","代价":"amplify","转折":"turn","解法":"solve","路径":"solve",
                 "梗":"joke","共情":"empathy","信息":"info","爽点":"solve","钩子":"hook"};
 
+  function splitSentences(line){
+    var parts = String(line).split(/(?<=[。！？；])/).map(function(x){ return x.trim(); }).filter(Boolean);
+    var out = [];
+    parts.forEach(function(p2){
+      if (out.length && cc(p2) < 7) out[out.length-1] += p2;
+      else out.push(p2);
+    });
+    return out;
+  }
+
   function parseItems(raw){
-    return String(raw).split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(line){
+    var rows = [];
+    String(raw).split(/\r?\n/).forEach(function(l){
+      l = l.trim();
+      if (!l) return;
+      if (cc(l) > 42) splitSentences(l).forEach(function(x){ rows.push(x); });
+      else rows.push(l);
+    });
+    return rows.map(function(line){
       var forced = "";
       var m = line.match(/^[\[【(（]\s*([^\]】)）]{1,4})\s*[\]】)）]\s*/);
       if (m && TAGMAP[m[1]]){ forced = TAGMAP[m[1]]; line = line.slice(m[0].length); }
@@ -730,17 +849,18 @@ textarea{resize:vertical;line-height:1.9}
     }).join("");
 
     var fscript = fullScript();
-    var aud = audit(fscript);
-    var rate = (total > 0) ? (cc(fscript) / total) : 0;
-    var auditHtml = '<div class="audit">' +
-      '<div><div class="k">句长起伏</div><div class="v' + (aud.cv < 0.3 ? " bad" : "") + '">' + aud.cv.toFixed(2) + '<small>' + (aud.cv >= 0.3 ? "够" : "偏平") + '</small></div></div>' +
-      '<div><div class="k">最长一句</div><div class="v' + (aud.longest > 25 ? " bad" : "") + '">' + aud.longest + '<small>字</small></div></div>' +
-      '<div><div class="k">AI 味词</div><div class="v' + (aud.slop > 0 ? " bad" : "") + '">' + aud.slop + '<small>处</small></div></div>' +
-      '<div><div class="k">口播语速</div><div class="v">' + rate.toFixed(1) + '<small>字/秒</small></div></div>' +
-    '</div>' +
-    '<div class="audit-note">' + (aud.cv >= 0.3 && aud.longest <= 25 && aud.slop === 0
-      ? "体检通过：句长有起伏，没有超长句，没有 AI 味词。"
-      : "体检建议：句长偏平就把长句拆开，最长句超过 25 字就砍断，AI 味词改成大白话。") + '</div>';
+    var sc = scoreAll();
+    var dimHtml = sc.dims.map(function(d){
+      return '<div class="dim"><div class="dk">' + d.k + '</div>' +
+        '<div class="dbar"><i style="width:' + (d.v/20*100) + '%;background:' + (d.v>=15?"var(--ink)":"var(--accent)") + '"></i></div>' +
+        '<div class="dv">' + d.v + '<small>/20</small></div></div>';
+    }).join("");
+    var issueHtml = sc.issues.length
+      ? '<div class="issues"><div class="ih">待改 ' + sc.issues.length + ' 处</div>' + sc.issues.slice(0,10).map(function(it){
+          return '<div class="issue"><span class="ino">' + it.n + '</span><span class="itxt">' + esc(it.txt) + '</span><span class="ifix">' + esc(it.fix) + '</span></div>';
+        }).join("") + '</div>'
+      : '<div class="issues pass">全部达标：单点、节拍、起伏、口语、具体度都过线。</div>';
+    var scoreHtml = '<div class="scorebox"><div class="stotal"><b>' + sc.total + '</b><small>/100</small><span>综合评分</span></div><div class="dims">' + dimHtml + '</div></div>' + issueHtml;
 
     var typeName = {talk:"口播", tour:"探盘", interview:"采访"}[state.type];
     var tip = "";
@@ -758,13 +878,14 @@ textarea{resize:vertical;line-height:1.9}
       '</div>' +
       '<div class="toolbar">' +
         '<button class="btn ghost" id="copyScriptBtn">复制口播稿</button>' +
+        '<button class="btn ghost" id="recheckBtn">重新体检</button>' +
         '<button class="btn ghost" id="copyBtn">复制分镜表</button>' +
         '<button class="btn ghost" id="mdBtn">下载 Markdown</button>' +
         '<button class="btn ghost" id="printBtn">打印 / 存 PDF</button>' +
       '</div>' +
       stats + tip +
       '<div class="sec-title">口播稿（照着念）</div>' +
-      auditHtml +
+      scoreHtml +
       '<div class="script-full" id="fullScript">' + esc(fscript).replace(/\n\n/g, '</p><p class="para">').replace(/^/, '<p class="para">') + '</p></div>' +
       '<div class="sec-title" style="margin-top:26px">节拍骨架</div>' + beats + legend +
       '<div class="sec-title">分镜单元</div>' + cards +
@@ -791,6 +912,7 @@ textarea{resize:vertical;line-height:1.9}
     });
 
     document.getElementById("copyScriptBtn").onclick = function(){ copyText(fullScript()); };
+    document.getElementById("recheckBtn").onclick = function(){ render(); };
     document.getElementById("copyBtn").onclick = function(){ copyText(toMarkdown()); };
     document.getElementById("mdBtn").onclick = downloadMd;
     document.getElementById("printBtn").onclick = function(){ window.print(); };
@@ -799,7 +921,9 @@ textarea{resize:vertical;line-height:1.9}
 
   /* ===== 导出 ===== */
   function toMarkdown(){
-    var L = ["# " + state.topic, "", "总时长 " + state.total + " 秒｜" + state.units.length + " 个单元｜账号 " + state.account, "", "## 口播稿", ""];
+    var d = new Date();
+    var stamp = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+    var L = ["# " + state.topic, "", "> 库：自媒体文案库　｜　" + stamp, "", "总时长 " + state.total + " 秒｜" + state.units.length + " 个单元｜账号 " + state.account, "", "## 口播稿", ""];
     L.push(fullScript());
     L.push("", "## 分镜", "");
     state.units.forEach(function(u,i){
@@ -833,7 +957,7 @@ textarea{resize:vertical;line-height:1.9}
     var blob = new Blob([toMarkdown()], {type:"text/markdown;charset=utf-8"});
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = (state.topic || "口播稿") + ".md";
+    a.download = "自媒体文案库-" + (state.topic || "口播稿") + ".md";
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 300);
     flash("已下载");
@@ -842,6 +966,71 @@ textarea{resize:vertical;line-height:1.9}
     var s = document.getElementById("status"), old = s.textContent;
     s.textContent = msg;
     setTimeout(function(){ s.textContent = old; }, 1400);
+  }
+
+  /* ===== 自媒体文案库 ===== */
+  var LIB = "wenan-lib-v1";
+  function libAll(){
+    try { return JSON.parse(localStorage.getItem(LIB) || "[]"); } catch(e){ return []; }
+  }
+  function libWrite(arr){
+    try { localStorage.setItem(LIB, JSON.stringify(arr.slice(0,50))); } catch(e){}
+  }
+  function libRender(){
+    var box = document.getElementById("libList");
+    if (!box) return;
+    var arr = libAll();
+    if (!arr.length){ box.innerHTML = '<div class="libempty">还没有存过稿子</div>'; return; }
+    box.innerHTML = arr.map(function(it){
+      return '<div class="librow"><span class="ld">' + it.date + '</span><span class="lt">' + esc(it.title) + '</span>' +
+        '<button data-load="' + it.id + '">打开</button><button data-del="' + it.id + '">删</button></div>';
+    }).join("");
+    box.querySelectorAll("[data-load]").forEach(function(b){
+      b.onclick = function(){
+        var rec = libAll().filter(function(x){ return x.id === b.dataset.load; })[0];
+        if (!rec) return;
+        ["account","topic","ideas","spots","questions","hook","cta","persona"].forEach(function(k){
+          if (rec.form && rec.form[k] != null && document.getElementById(k)) document.getElementById(k).value = rec.form[k];
+        });
+        if (rec.form && rec.form.type){ state.type = rec.form.type; syncTypeFields(); }
+        if (rec.form && rec.form.dur) state.dur = rec.form.dur;
+        render();
+        flash("已打开");
+      };
+    });
+    box.querySelectorAll("[data-del]").forEach(function(b){
+      b.onclick = function(){
+        libWrite(libAll().filter(function(x){ return x.id !== b.dataset.del; }));
+        libRender();
+      };
+    });
+  }
+  function libSave(){
+    if (!state.units.length){ flash("先生成"); return; }
+    var d = new Date();
+    var date = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+    var rec = {
+      id: "w" + Date.now(),
+      title: state.topic || "未命名",
+      date: date,
+      md: toMarkdown(),
+      form: {
+        type: state.type, dur: state.dur,
+        account: document.getElementById("account").value,
+        topic: document.getElementById("topic").value,
+        ideas: document.getElementById("ideas").value,
+        spots: document.getElementById("spots").value,
+        questions: document.getElementById("questions").value,
+        hook: document.getElementById("hook").value,
+        cta: document.getElementById("cta").value,
+        persona: document.getElementById("persona").value
+      }
+    };
+    var arr = libAll();
+    arr.unshift(rec);
+    libWrite(arr);
+    libRender();
+    flash("已存入文案库");
   }
 
   /* ===== 存储 ===== */
@@ -916,6 +1105,13 @@ textarea{resize:vertical;line-height:1.9}
     el.addEventListener("input", save);
     el.addEventListener("change", save);
   });
+
+  document.getElementById("saveLibBtn").addEventListener("click", libSave);
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    if (!state.units.length){ flash("先生成"); return; }
+    downloadMd();
+  });
+  libRender();
 
   restore();
   if (document.getElementById("ideas").value.trim()) render();
