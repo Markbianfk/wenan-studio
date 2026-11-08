@@ -110,6 +110,9 @@ textarea{resize:vertical;line-height:1.9}
 .note ol{margin:6px 0 0;padding-left:18px}
 
 
+.syncbox{margin-top:10px;padding:12px;border:1px solid var(--line);background:#FBFAF8}
+.syncbox input{margin-bottom:6px}
+.stip{font-size:10.5px;color:var(--ink-3);line-height:1.6;margin-top:6px}
 .liblist{margin-top:10px}
 .librow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line-2);font-size:12px}
 .librow:first-child{border-top:0}
@@ -283,6 +286,17 @@ textarea{resize:vertical;line-height:1.9}
       <div class="actions" style="margin-top:0">
         <button class="btn ghost" id="saveLibBtn">存入文案库</button>
         <button class="btn ghost" id="exportBtn">导出终稿</button>
+        <button class="btn ghost" id="syncBtn">同步到得到大脑</button>
+      </div>
+      <div class="syncbox hidden" id="syncCfg">
+        <input type="text" id="gkKey" placeholder="API Key（gk_live_ 开头）" autocomplete="off">
+        <input type="text" id="gkCid" placeholder="Client ID（cli_ 开头）" autocomplete="off">
+        <input type="text" id="gkTopic" placeholder="知识库 topic_id" value="07owyNe0">
+        <div class="actions" style="margin-top:8px">
+          <button class="btn" id="gkSave">保存并同步</button>
+          <button class="btn ghost" id="gkCancel">取消</button>
+        </div>
+        <div class="stip">Key 只存在这台设备的浏览器里，不会写进网页源码。</div>
       </div>
       <div class="liblist" id="libList"></div>
     </div>
@@ -1033,6 +1047,49 @@ textarea{resize:vertical;line-height:1.9}
     flash("已存入文案库");
   }
 
+  /* ===== 同步到得到大脑 ===== */
+  var GK = "gk_cfg_v1";
+  var GK_BASE = "https://openapi.biji.com/open/api/v1";
+  function gkCfg(){
+    try { return JSON.parse(localStorage.getItem(GK) || "null"); } catch(e){ return null; }
+  }
+  function gkShow(on){
+    document.getElementById("syncCfg").classList.toggle("hidden", !on);
+    var c = gkCfg();
+    if (on && c){
+      document.getElementById("gkKey").value = c.key || "";
+      document.getElementById("gkCid").value = c.cid || "";
+      document.getElementById("gkTopic").value = c.topic || "07owyNe0";
+    }
+  }
+  function gkSync(){
+    if (!state.units.length){ flash("先生成"); return; }
+    var key = document.getElementById("gkKey").value.trim();
+    var cid = document.getElementById("gkCid").value.trim();
+    var topic = document.getElementById("gkTopic").value.trim() || "07owyNe0";
+    if (!key || !cid){ flash("先填 Key 和 Client ID"); return; }
+    try { localStorage.setItem(GK, JSON.stringify({key:key, cid:cid, topic:topic})); } catch(e){}
+
+    var d = new Date();
+    var stamp = d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+    var payload = {
+      note_type: "plain_text",
+      title: (state.topic || "未命名") + "｜" + stamp,
+      content: toMarkdown(),
+      tags: ["自媒体文案库", {talk:"口播",tour:"探盘",interview:"采访"}[state.type] || "口播"],
+      topic_id: topic
+    };
+    flash("同步中…");
+    fetch(GK_BASE + "/resource/note/save", {
+      method: "POST",
+      headers: {"Authorization": key, "X-Client-ID": cid, "Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.success){ flash("已同步到得到大脑"); gkShow(false); }
+      else { flash("同步失败：" + ((j && j.error && (j.error.message || j.error.reason)) || "检查 Key")); }
+    }).catch(function(e){ flash("同步失败：" + (e && e.message ? e.message : "网络")); });
+  }
+
   /* ===== 存储 ===== */
   var KEY = "wenan-studio-v3";
   function save(){
@@ -1107,6 +1164,12 @@ textarea{resize:vertical;line-height:1.9}
   });
 
   document.getElementById("saveLibBtn").addEventListener("click", libSave);
+  document.getElementById("syncBtn").addEventListener("click", function(){
+    var c = gkCfg();
+    if (c && c.key && c.cid) gkSync(); else gkShow(true);
+  });
+  document.getElementById("gkSave").addEventListener("click", gkSync);
+  document.getElementById("gkCancel").addEventListener("click", function(){ gkShow(false); });
   document.getElementById("exportBtn").addEventListener("click", function(){
     if (!state.units.length){ flash("先生成"); return; }
     downloadMd();
