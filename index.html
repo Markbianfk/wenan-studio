@@ -110,6 +110,12 @@ textarea{resize:vertical;line-height:1.9}
 .note ol{margin:6px 0 0;padding-left:18px}
 
 
+.audit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;border:1px solid var(--line);background:#fff;padding:14px 18px;margin-bottom:22px}
+.audit .k{font-size:10px;letter-spacing:.12em;color:var(--ink-3);margin-bottom:3px}
+.audit .v{font-size:15px;font-weight:600}
+.audit .v small{font-size:11px;font-weight:400;color:var(--ink-3);margin-left:2px}
+.audit .v.bad{color:var(--accent)}
+.audit-note{font-size:11px;color:var(--ink-3);margin:-14px 0 20px;line-height:1.7}
 .script-full{border:1px solid var(--line);background:#fff;padding:20px 22px;margin-bottom:8px}
 .script-full .para{font-size:15.5px;line-height:1.95;margin:0 0 12px;color:var(--ink)}
 .script-full .para:last-child{margin-bottom:0}
@@ -357,6 +363,34 @@ textarea{resize:vertical;line-height:1.9}
     return p >= 8 ? cut.slice(0, p) : cut;
   }
 
+  /* ===== 去 AI 味 ===== */
+  var SLOP = {
+    "本质上":"说到底", "不可否认":"", "值得注意的是":"", "不难发现":"",
+    "首先":"先说", "其次":"再说", "此外":"还有", "综上所述":"",
+    "显著提升":"涨了不少", "赋能":"帮上忙", "在这个时代":"现在",
+    "拥抱变化":"跟上", "真正的":"真", "非常重要":"很关键"
+  };
+  function deslop(str){
+    var s = String(str);
+    Object.keys(SLOP).forEach(function(k){ if (s.indexOf(k) > -1) s = s.split(k).join(SLOP[k]); });
+    return s.replace(/[，]{2,}/g, "，").replace(/^[，、]/, "").trim();
+  }
+
+  /* ===== 体检：句长方差 / 超长句 / AI 味 ===== */
+  function audit(text){
+    var sents = text.split(/[。！？\n]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+    var lens = sents.map(function(x){ return x.length; });
+    var n = lens.length || 1;
+    var mean = lens.reduce(function(a,b){ return a+b; }, 0) / n;
+    var varc = lens.reduce(function(a,b){ return a + (b-mean)*(b-mean); }, 0) / n;
+    var sd = Math.sqrt(varc);
+    var cv = mean ? sd / mean : 0;
+    var longest = lens.length ? Math.max.apply(null, lens) : 0;
+    var slop = 0;
+    Object.keys(SLOP).forEach(function(k){ if (text.indexOf(k) > -1) slop++; });
+    return {cv:cv, longest:longest, slop:slop, sentences:sents.length, mean:mean};
+  }
+
   /* ===== 语义分类 ===== */
   var NUM = /(\d[\d,.]*\s*(元|块|万|千|平|个月|年|次|天)|多摊|滞纳金|几万|几千|百分之|一成|三成)/;
   var RULE = /(必须|不能|不得|要|得|规定|卡住|过户|税|产权|备案|违|罚)/;
@@ -590,10 +624,15 @@ textarea{resize:vertical;line-height:1.9}
     units = units.concat(body);
 
     var tail = tone === "sharp" ? "别嫌我说话直。" : (tone === "warm" ? "不着急，慢慢看。" : "");
-    var afterText = cta || (topic + "，就讲到这。" + tail + (type === "interview" ? "下条我把剩下的问题也问了。" : "评论区留小区名，我看你那套。"));
+    var afterText = cta || (type === "interview"
+      ? "这五个问题问完，剩下的你自己去看一眼更实在。"
+      : "下次带看，先拐去物业办公室，翻那三页纸。" + tail);
     var au = stageUnit("after", seed, units.length+1, type);
     au.lead = ""; au.parts = [afterText, "", ""];
     units.push(au);
+
+    units.forEach(function(u){ u.parts = u.parts.map(function(x){ return x ? deslop(x) : x; }); });
+    units.forEach(function(u){ if (u.lead) u.lead = deslop(u.lead); });
 
     /* 时间轴 */
     var t = 0;
@@ -690,6 +729,19 @@ textarea{resize:vertical;line-height:1.9}
       '</article>';
     }).join("");
 
+    var fscript = fullScript();
+    var aud = audit(fscript);
+    var rate = (total > 0) ? (cc(fscript) / total) : 0;
+    var auditHtml = '<div class="audit">' +
+      '<div><div class="k">句长起伏</div><div class="v' + (aud.cv < 0.3 ? " bad" : "") + '">' + aud.cv.toFixed(2) + '<small>' + (aud.cv >= 0.3 ? "够" : "偏平") + '</small></div></div>' +
+      '<div><div class="k">最长一句</div><div class="v' + (aud.longest > 25 ? " bad" : "") + '">' + aud.longest + '<small>字</small></div></div>' +
+      '<div><div class="k">AI 味词</div><div class="v' + (aud.slop > 0 ? " bad" : "") + '">' + aud.slop + '<small>处</small></div></div>' +
+      '<div><div class="k">口播语速</div><div class="v">' + rate.toFixed(1) + '<small>字/秒</small></div></div>' +
+    '</div>' +
+    '<div class="audit-note">' + (aud.cv >= 0.3 && aud.longest <= 25 && aud.slop === 0
+      ? "体检通过：句长有起伏，没有超长句，没有 AI 味词。"
+      : "体检建议：句长偏平就把长句拆开，最长句超过 25 字就砍断，AI 味词改成大白话。") + '</div>';
+
     var typeName = {talk:"口播", tour:"探盘", interview:"采访"}[state.type];
     var tip = "";
     if (diff < 0){
@@ -712,7 +764,8 @@ textarea{resize:vertical;line-height:1.9}
       '</div>' +
       stats + tip +
       '<div class="sec-title">口播稿（照着念）</div>' +
-      '<div class="script-full" id="fullScript">' + esc(fullScript()).replace(/\n\n/g, '</p><p class="para">').replace(/^/, '<p class="para">') + '</p></div>' +
+      auditHtml +
+      '<div class="script-full" id="fullScript">' + esc(fscript).replace(/\n\n/g, '</p><p class="para">').replace(/^/, '<p class="para">') + '</p></div>' +
       '<div class="sec-title" style="margin-top:26px">节拍骨架</div>' + beats + legend +
       '<div class="sec-title">分镜单元</div>' + cards +
       '<div class="note"><b>写法依据：</b>一句一个意思，句长控制在 22 字内；每单元开口先给连接词，观众不能回看，逻辑必须显性；结论前置，解法压在六成之后。</div>';
